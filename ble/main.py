@@ -107,7 +107,7 @@ class WSClient(WebSocketClient):
                 print(f'return: {ret}')
         except ClientClosedError:
             self.cmd_stop()
-            # self.todo_dev.clear()
+            self.todo_dev.clear()
             self.connection.close()
 
     def cmd_scan(self, duration=10):
