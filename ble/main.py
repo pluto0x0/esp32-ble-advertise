@@ -58,7 +58,7 @@ class ConfigControl:
                 self._stored = data['stored']
         except BaseException:
             self._scanned = {}
-            self._stored = {}
+            self._stored = []
 
     def dump(self):
         with open(self.filename, 'w', encoding='utf-8') as file:
