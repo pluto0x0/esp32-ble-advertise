@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蓝牙设备模拟器</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.min.js"></script>
+    <style>
+        .monospace {
+            font-family: 'Consolas', Courier, 'Lucida Console', 'Monaco', 'Consolas', 'Menlo', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container mt-5">
+        <!-- 服务器设置页面 -->
+        <div v-if="!isConnected" class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <h2 class="mb-4">设置WebSocket服务器</h2>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model="serverAddress" 
+                           placeholder="例如: 192.168.1.1:8080" @keyup.enter="connectServer">
+                    <button class="btn btn-primary" @click="connectServer">连接</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主页面 -->
+        <div v-else>
+            <!-- 状态显示 -->
+            <div class="alert" :class="statusClass" role="alert">
+                当前状态: {{ status }}
+                <span v-if="status === 'advertising'">
+                    ({{ currentSimulatingDevice }})
+                </span>
+                <button class="btn btn-warning ms-2" @click="stopOperation" 
+                v-if="status !== 'idle'">停止</button>
+            </div>
+
+            <!-- 扫描控制 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">扫描控制</h5>
+                    设置为 0 表示持续扫描<br>
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <input type="number" class="form-control" v-model="scanTime" 
+                                   placeholder="扫描时间(秒)" :disabled="status !== 'idle'">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" @click="startScan" 
+                                    :disabled="status !== 'idle'">开始扫描</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 扫描到的设备表格 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">扫描到的设备</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>地址</th>
+                                <th>信号强度</th>
+                                <th>数据</th>
+                                <th>制造商</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="device in sortedDevices" :key="device.addr">
+                                <td class="monospace">{{ device.addr }}</td>
+                                <td class="monospace">{{ device.rssi }}</td>
+                                <td class="monospace">{{ device.data }}</td>
+                                <td>{{ getManufacturer(device.data) }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success" 
+                                            @click="storeDevice(device)">储存</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 储存的设备表格 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">储存的设备</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <th>地址</th>
+                                <th>信号强度</th>
+                                <th>数据</th>
+                                <th>制造商</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(device, index) in storedDevices" :key="index">
+                                <td>{{ device.alias }}</td>
+                                <td class="monospace">{{ device.addr }}</td>
+                                <td class="monospace">{{ device.rssi }}</td>
+                                <td class="monospace">{{ device.data }}</td>
+                                <td>{{ getManufacturer(device.data) }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary me-1" 
+                                            @click="simulateDevice(device)" 
+                                            :disabled="status !== 'idle'">模拟</button>
+                                    <button class="btn btn-sm btn-warning me-1" 
+                                            @click="editAlias(index)">修改</button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            @click="deleteDevice(index)">删除</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 服务器设置 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">服务器设置</h5>
+                    <div class="input-group">
+                        <input type="text" class="form-control" v-model="serverAddress" 
+                               placeholder="服务器地址">
+                        <button class="btn btn-primary" @click="connectServer">更新服务器</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onBeforeUnmount } = Vue;
+
+
+        createApp({
+            setup() {
+                const isConnected = ref(false);
+                const serverAddress = ref(localStorage.getItem('serverAddress') || '');
+                const ws = ref(null);
+                const status = ref('idle');
+                const scanTime = ref(10);
+                const devices = ref({});
+                const storedDevices = ref([]);
+                const currentSimulatingDevice = ref('');
+                const manufacturer = ref({});
+
+                // 从服务器获取已存储的设备
+                const loadStoredDevices = () => {
+                    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+                        ws.value.send('store');
+                    }
+                };
+
+                // 保存设备到服务器
+                const saveStoredDevices = () => {
+                    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+                        const base64Data = btoa(JSON.stringify(storedDevices.value));
+                        ws.value.send(`store ${base64Data}`);
+                    }
+                };
+
+                // 按信号强度排序的设备列表
+                const sortedDevices = computed(() => {
+                    return Object.values(devices.value)
+                        .sort((a, b) => b.rssi - a.rssi);
+                });
+
+                // 状态样式
+                const statusClass = computed(() => {
+                    switch (status.value) {
+                        case 'scanning': return 'alert-primary';
+                        case 'advertising': return 'alert-success';
+                        default: return 'alert-secondary';
+                    }
+                });
+
+                // 连接WebSocket服务器
+                const connectServer = () => {
+                    if (ws.value) {
+                        ws.value.close();
+                    }
+
+                    try {
+                        ws.value = new WebSocket(`ws://${serverAddress.value}`);
+                        
+                        ws.value.onopen = () => {
+                            isConnected.value = true;
+                            localStorage.setItem('serverAddress', serverAddress.value);
+                            loadStoredDevices();
+                            // ws.value.send('status');
+                            devices.value = JSON.parse(localStorage.getItem('devices') || '{}');
+                            loadManufacturers();
+                        };
+
+                        ws.value.onmessage = (event) => {
+                            const message = event.data;
+                            console.log('Message:', message);
+                            if (message.startsWith('new-device')) {
+                                const [, addr, rssi, ...dataParts] = message.split(' ');
+                                devices.value[addr] = {
+                                    addr,
+                                    rssi: parseInt(rssi),
+                                    data: dataParts.join(' ')
+                                };
+                                localStorage.setItem('devices', JSON.stringify(devices.value));
+                            } else if (message.startsWith('status')) {
+                                const [, newStatus] = message.split(' ');
+                                status.value = newStatus;
+                                if (newStatus !== 'advertising') {
+                                    currentSimulatingDevice.value = '';
+                                }
+                            } else if (message.startsWith('stored-devices')) {
+                                try {
+                                    const base64Data = message.split(' ')[1];
+                                    const decodedData = atob(base64Data);
+                                    storedDevices.value = JSON.parse(decodedData);
+                                } catch (error) {
+                                    console.error('Error parsing stored devices:', error);
+                                }
+                            }
+                        };
+
+                        ws.value.onclose = () => {
+                            isConnected.value = false;
+                        };
+                    } catch (error) {
+                        alert('连接失败: ' + error.message);
+                    }
+                };
+
+                // 开始扫描
+                const startScan = () => {
+                    devices.value = {};
+                    ws.value.send(`scan ${scanTime.value}`);
+                    if (scanTime.value > 0) {
+                        setTimeout(() => {
+                            status.value = 'idle';
+                        }, scanTime.value * 1000);
+                    }
+                };
+
+                // 停止当前操作
+                const stopOperation = () => {
+                    ws.value.send('stop');
+                };
+
+                // 储存设备
+                const storeDevice = (device) => {
+                    const alias = prompt('请输入设备别名：');
+                    if (alias) {
+                        storedDevices.value.push({
+                            ...device,
+                            alias
+                        });
+                        saveStoredDevices();
+                    }
+                };
+
+                // 模拟设备
+                const simulateDevice = (device) => {
+                    ws.value.send(`simulate ${device.data}`);
+                    currentSimulatingDevice.value = device.alias;
+                };
+
+                // 修改别名
+                const editAlias = (index) => {
+                    const newAlias = prompt('请输入新的别名：', storedDevices.value[index].alias);
+                    if (newAlias) {
+                        storedDevices.value[index].alias = newAlias;
+                        saveStoredDevices();
+                    }
+                };
+
+                // 删除设备
+                const deleteDevice = (index) => {
+                    if (confirm('确定要删除这个设备吗？')) {
+                        storedDevices.value.splice(index, 1);
+                        saveStoredDevices();
+                    }
+                };
+                
+                // 加载制造商信息
+                const loadManufacturers = () => {
+                    fetch('/manufacturer.json')
+                        .then(response => response.json())
+                        .then(data => {
+                            manufacturer.value = data;
+                        })
+                        .catch(error => {
+                            console.error('Error loading manufacturer data:', error);
+                        });
+                };
+
+                const getManufacturer = (data) => {
+                    let bytes = [];
+                    let na = 'N/A';
+                    for (let c = 0; c < data.length; c += 2)
+                        bytes.push(parseInt(data.substr(c, 2), 16));
+                    while (bytes.length > 0) {
+                        const length = bytes.shift();
+                        const type = bytes.shift();
+                        if (type === 0xff) {
+                            idx =  bytes[1] * 16 + bytes[0];
+                            return manufacturer.value[idx] || na;
+                        }
+                        bytes = bytes.slice(length - 1);
+                    }
+                    return na;
+                };
+
+                // 页面关闭前确认
+                window.addEventListener('beforeunload', (event) => {
+                    if (status.value !== 'idle') {
+                        event.preventDefault();
+                        event.returnValue = '当前有正在进行的操作，确定要离开吗？';
+                        return event.returnValue;
+                    }
+                });
+
+                // 如果有存储的服务器地址，自动连接
+                if (serverAddress.value) {
+                    connectServer();
+                }
+
+                return {
+                    isConnected,
+                    serverAddress,
+                    status,
+                    statusClass,
+                    scanTime,
+                    devices,
+                    sortedDevices,
+                    storedDevices,
+                    currentSimulatingDevice,
+                    connectServer,
+                    startScan,
+                    stopOperation,
+                    storeDevice,
+                    simulateDevice,
+                    editAlias,
+                    deleteDevice,
+                    getManufacturer,
+                    loadManufacturers
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
