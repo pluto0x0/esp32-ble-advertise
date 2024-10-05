@@ -107,6 +107,7 @@ class WSClient(WebSocketClient):
                 print(f'return: {ret}')
         except ClientClosedError:
             self.cmd_stop()
+            # self.todo_dev.clear()
             self.connection.close()
 
     def cmd_scan(self, duration=10):
@@ -115,12 +116,12 @@ class WSClient(WebSocketClient):
         def handler(addr_type, addr, connectable, rssi, adv_data):
             adv_data = adv_data.hex()
             self.todo_dev.append((addr, rssi, adv_data))
-            print(self.todo_dev)
+            print('new device!')
 
         self.ble.set_handler(handler)
         self.ble.scan(duration * 1000)
         return self.cmd_status()
-
+ 
     def cmd_simulate(self, data):
         self.ble.advertise(data)
         return self.cmd_status()
@@ -146,17 +147,18 @@ class WSClient(WebSocketClient):
     def loop(self):
         if not self.todo_dev:
             return
-        # machine.disable_irq()
-        try:
-            for addr, rssi, adv_data in self.todo_dev:
-                self.config.scanned(self.config.scanned() | {
-                    addr: {'rssi': rssi, 'data': adv_data}})
-                self.connection.write(f'new-device {addr} {rssi} {adv_data}')
-            self.todo_dev = []
-        finally:
-            # machine.enable_irq()
-            pass
+        
+        state = machine.disable_irq()       # critical section
+        temp = [i for i in self.todo_dev]   # deep copy
+        self.todo_dev.clear()
+        machine.enable_irq(state)
 
+        print(temp)
+        for addr, rssi, adv_data in temp:
+            self.config.scanned(self.config.scanned() | {
+                addr: {'rssi': rssi, 'data': adv_data}})
+            self.connection.write(f'new-device {addr} {rssi} {adv_data}')
+        
 
 class WSServer(WebSocketServer):
     def __init__(self):

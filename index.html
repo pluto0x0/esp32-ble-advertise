@@ -49,8 +49,12 @@
                                    placeholder="扫描时间(秒)" :disabled="status !== 'idle'">
                         </div>
                         <div class="col-auto">
-                            <button class="btn btn-primary" @click="startScan" 
-                                    :disabled="status !== 'idle'">开始扫描</button>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" @click="startScan" 
+                                :disabled="status !== 'idle'">开始扫描</button>
+                                <button class="btn btn-warning" @click="clearDevices"
+                                >清空结果</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -109,13 +113,15 @@
                                 <td class="monospace">{{ device.data }}</td>
                                 <td>{{ getManufacturer(device.data) }}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-primary me-1" 
-                                            @click="simulateDevice(device)" 
-                                            :disabled="status !== 'idle'">模拟</button>
-                                    <button class="btn btn-sm btn-warning me-1" 
-                                            @click="editAlias(index)">修改</button>
-                                    <button class="btn btn-sm btn-danger" 
-                                            @click="deleteDevice(index)">删除</button>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-primary" 
+                                        @click="simulateDevice(device)" 
+                                        :disabled="status !== 'idle'">模拟</button>
+                                        <button class="btn btn-sm btn-warning" 
+                                        @click="editAlias(index)">修改</button>
+                                        <button class="btn btn-sm btn-danger" 
+                                        @click="deleteDevice(index)">删除</button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -239,7 +245,7 @@
 
                 // 开始扫描
                 const startScan = () => {
-                    devices.value = {};
+                    // devices.value = {};
                     ws.value.send(`scan ${scanTime.value}`);
                     if (scanTime.value > 0) {
                         setTimeout(() => {
@@ -317,6 +323,12 @@
                     return na;
                 };
 
+                // 清空设备列表
+                const clearDevices = () => {
+                    devices.value = {};
+                    localStorage.removeItem('devices');
+                };
+
                 // 页面关闭前确认
                 window.addEventListener('beforeunload', (event) => {
                     if (status.value !== 'idle') {
@@ -349,7 +361,8 @@
                     editAlias,
                     deleteDevice,
                     getManufacturer,
-                    loadManufacturers
+                    loadManufacturers,
+                    clearDevices
                 };
             }
         }).mount('#app');
