@@ -8,6 +8,8 @@ from websocket_server import (
     WebSocketServer,
     WebSocketClient
 )
+import config
+from machine import Pin
 
 
 class BLEControl:
@@ -84,27 +86,32 @@ class WSClient(WebSocketClient):
     ble = BLEControl()
     config = ConfigControl('ble.json')
     todo_dev = []
+    buffer = ''
 
     def __init__(self, conn):
         super().__init__(conn)
 
     def process(self):
         try:
-            msg = self.connection.read()
-            if not msg:
+            data = self.connection.read()
+            if not data:
                 return
-            msg = msg.decode("utf-8")
-            items = msg.split(" ")
-            cmd = items[0]
-            method = f'cmd_{cmd}'
-            ret = f'Command not found: {cmd}'
-            if debug:
-                print(f'command: {items}')
-            if hasattr(self, method):
-                ret = getattr(self, method)(*items[1:]) or 'ok'
-            self.connection.write(ret)
-            if debug:
-                print(f'return: {ret}')
+            data = data.decode("utf-8")
+            self.buffer += data
+            msgs = self.buffer.split('\n')
+            for msg in msgs[:-1]:
+                items = msg.split(" ")
+                cmd = items[0]
+                method = f'cmd_{cmd}'
+                ret = f'Command not found: "{cmd}"'
+                if debug:
+                    print(f'command: {items}')
+                if hasattr(self, method):
+                    ret = getattr(self, method)(*items[1:]) or 'ok'
+                self.connection.write(ret)
+                if debug:
+                    print(f'return: {ret}')
+            self.buffer = msgs[-1]
         except ClientClosedError:
             self.cmd_stop()
             self.todo_dev.clear()
@@ -174,16 +181,19 @@ class WSServer(WebSocketServer):
             client.loop()
 
 
-import config
-
-
 def main():
+    led = Pin(2, Pin.OUT)
+    led.on()
     if config.method == 'ap':
-        connect.ap(config.ssid, config.passwd, **config.networks)
+        connect.do_ap(**config.ap)
     elif config.method == 'wlan':
-        connect.wlan(config.ssid, config.passwd)
+        connect.do_wlan(**config.wlan)
+    if config.test_internet:
+        print('Internet connection:', connect.check_internet())
     app = WSServer()
     app.start(port=config.ws_port)
+    led.off()
+
     try:
         while True:
             app.process_all()
