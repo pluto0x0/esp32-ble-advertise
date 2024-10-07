@@ -31,7 +31,7 @@
             <!-- 状态显示 -->
             <div class="alert" :class="statusClass" role="alert">
                 当前状态: {{ status }}
-                <span v-if="status === 'advertising'">
+                <span v-if="status === 'advertising' && currentSimulatingDevice">
                     ({{ currentSimulatingDevice }})
                 </span>
                 <button class="btn btn-warning ms-2" @click="stopOperation" 

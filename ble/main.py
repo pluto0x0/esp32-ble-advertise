@@ -113,7 +113,7 @@ class WSClient(WebSocketClient):
                     print(f'return: {ret}')
             self.buffer = msgs[-1]
         except ClientClosedError:
-            self.cmd_stop()
+            # self.cmd_stop()
             self.todo_dev.clear()
             self.connection.close()
 
