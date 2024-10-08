@@ -315,7 +315,7 @@
                         const length = bytes.shift();
                         const type = bytes.shift();
                         if (type === 0xff) {
-                            idx =  bytes[1] * 16 + bytes[0];
+                            idx =  bytes[1] * 256 + bytes[0];
                             return manufacturer.value[idx] || na;
                         }
                         bytes = bytes.slice(length - 1);
