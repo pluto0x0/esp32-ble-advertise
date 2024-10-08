@@ -64,6 +64,9 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <h5 class="card-title">扫描到的设备</h5>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" v-model="searchQuery" placeholder="搜索">
+                    </div>
                     <table class="table">
                         <thead>
                             <tr>
@@ -141,6 +144,13 @@
                 </div>
             </div>
         </div>
+
+        <!-- GitHub Repository Link -->
+        <div class="text-center mt-4">
+            <a href="https://github.com/pluto0x0/esp32-ble-advertise" target="_blank">
+                查看 GitHub 仓库
+            </a>
+        </div>
     </div>
 
     <script>
@@ -154,10 +164,11 @@
                 const ws = ref(null);
                 const status = ref('idle');
                 const scanTime = ref(10);
-                const devices = ref({});
+                const devices = ref([]);
                 const storedDevices = ref([]);
                 const currentSimulatingDevice = ref('');
                 const manufacturer = ref({});
+                const searchQuery = ref('');
 
                 // 从服务器获取已存储的设备
                 const loadStoredDevices = () => {
@@ -177,6 +188,8 @@
                 // 按信号强度排序的设备列表
                 const sortedDevices = computed(() => {
                     return Object.values(devices.value)
+                        .filter(device => device.data.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                            getManufacturer(device.data).toLowerCase().includes(searchQuery.value.toLowerCase()))
                         .sort((a, b) => b.rssi - a.rssi);
                 });
 
@@ -348,6 +361,7 @@
                     serverAddress,
                     status,
                     statusClass,
+                    searchQuery,
                     scanTime,
                     devices,
                     sortedDevices,
