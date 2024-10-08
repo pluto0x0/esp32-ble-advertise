@@ -10,6 +10,7 @@ from websocket_server import (
 )
 import config
 from machine import Pin
+from utils import deepcopy
 
 
 class BLEControl:
@@ -98,7 +99,7 @@ class WSClient(WebSocketClient):
                 return
             data = data.decode("utf-8")
             self.buffer += data
-            msgs = self.buffer.split('\n')
+            msgs = self.buffer.split('\r\n')
             for msg in msgs[:-1]:
                 items = msg.split(" ")
                 cmd = items[0]
@@ -113,7 +114,8 @@ class WSClient(WebSocketClient):
                     print(f'return: {ret}')
             self.buffer = msgs[-1]
         except ClientClosedError:
-            # self.cmd_stop()
+            if self.ble.status == 'scanning':
+                self.ble.stop()
             self.todo_dev.clear()
             self.connection.close()
 
@@ -156,14 +158,13 @@ class WSClient(WebSocketClient):
             return
         
         state = machine.disable_irq()       # critical section
-        temp = [i for i in self.todo_dev]   # deep copy
+        temp = deepcopy(self.todo_dev)      # deep copy
         self.todo_dev.clear()
         machine.enable_irq(state)
 
-        print(temp)
         for addr, rssi, adv_data in temp:
-            self.config.scanned(self.config.scanned() | {
-                addr: {'rssi': rssi, 'data': adv_data}})
+            # self.config.scanned(self.config.scanned() | {
+            #     addr: {'rssi': rssi, 'data': adv_data}})      # no need to do this
             self.connection.write(f'new-device {addr} {rssi} {adv_data}')
         
 

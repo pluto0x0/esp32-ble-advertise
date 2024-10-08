@@ -173,7 +173,7 @@
                 // 从服务器获取已存储的设备
                 const loadStoredDevices = () => {
                     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-                        ws.value.send('store\n');
+                        ws.value.send('store\r\n');
                     }
                 };
 
@@ -181,7 +181,7 @@
                 const saveStoredDevices = () => {
                     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
                         const base64Data = btoa(JSON.stringify(storedDevices.value));
-                        ws.value.send(`store ${base64Data}\n`);
+                        ws.value.send(`store ${base64Data}\r\n`);
                     }
                 };
 
@@ -215,7 +215,7 @@
                             isConnected.value = true;
                             localStorage.setItem('serverAddress', serverAddress.value);
                             loadStoredDevices();
-                            ws.value.send('status\n');
+                            ws.value.send('status\r\n');
                             devices.value = JSON.parse(localStorage.getItem('devices') || '{}');
                             loadManufacturers();
                         };
@@ -259,7 +259,7 @@
                 // 开始扫描
                 const startScan = () => {
                     // devices.value = {};
-                    ws.value.send(`scan ${scanTime.value}\n`);
+                    ws.value.send(`scan ${scanTime.value}\r\n`);
                     if (scanTime.value > 0) {
                         setTimeout(() => {
                             status.value = 'idle';
@@ -269,7 +269,7 @@
 
                 // 停止当前操作
                 const stopOperation = () => {
-                    ws.value.send('stop\n');
+                    ws.value.send('stop\r\n');
                 };
 
                 // 储存设备
@@ -286,7 +286,7 @@
 
                 // 模拟设备
                 const simulateDevice = (device) => {
-                    ws.value.send(`simulate ${device.data}\n`);
+                    ws.value.send(`simulate ${device.data}\r\n`);
                     currentSimulatingDevice.value = device.alias;
                 };
 

@@ -18,7 +18,7 @@ wlan_zju = {
 }
 
 wlan_ap = {
-    'ssid': "Pluto0x0’s iPhone",
+    'ssid': "esp32wlan",
     'passwd': 'qwedsazxc',
     'config': {
         'hostname': 'esp32',
