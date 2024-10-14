@@ -93,11 +93,13 @@
                 </div>
             </div>
 
-            <!-- 储存的设备表格 -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">储存的设备</h5>
-                    <table class="table">
+        <!-- 储存的设备表格 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">储存的设备</h5>
+                <!-- 使用 table-responsive 让表格在小屏幕设备上滚动 -->
+                <div class="table-responsive">
+                    <table class="table table-striped">
                         <thead>
                             <tr>
                                 <th>名称</th>
@@ -110,11 +112,11 @@
                         </thead>
                         <tbody>
                             <tr v-for="(device, index) in storedDevices" :key="index">
-                                <td>{{ device.alias }}</td>
-                                <td class="monospace">{{ device.addr }}</td>
-                                <td class="monospace">{{ device.rssi }}</td>
-                                <td class="monospace">{{ device.data }}</td>
-                                <td>{{ getManufacturer(device.data) }}</td>
+                                <td style="white-space: normal; word-break: break-all;">{{ device.alias }}</td>
+                                <td class="monospace" style="white-space: normal; word-break: break-all;">{{ device.addr }}</td>
+                                <td class="monospace" style="white-space: normal; word-break: break-all;">{{ device.rssi }}</td>
+                                <td class="monospace" style="white-space: normal; word-break: break-all;">{{ device.data }}</td>
+                                <td style="white-space: normal; word-break: break-all;">{{ getManufacturer(device.data) }}</td>
                                 <td>
                                     <div class="btn-group">
                                         <button class="btn btn-sm btn-primary" 
@@ -131,6 +133,8 @@
                     </table>
                 </div>
             </div>
+        </div>
+
 
             <!-- 服务器设置 -->
             <div class="card mb-4">

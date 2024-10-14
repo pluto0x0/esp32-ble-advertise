@@ -1,0 +1,11 @@
+.monospace {
+    font-family: 'Consolas', Courier, 'Lucida Console', 'Monaco', 'Consolas', 'Menlo', monospace;
+}
+
+.data .v-data-table__td-value {
+    /* max-width: 50%; */
+    /* white-space: nowrap; */
+    /* overflow: auto; */
+    /* text-overflow: ellipsis; */
+    line-break: anywhere;
+}
