@@ -12,7 +12,6 @@ const app = createApp({
         const serverAddress = ref(localStorage.getItem('serverAddress') || '')
         const ws = ref(null)
         const status = ref('idle')
-        const scanTime = ref(0)
         const devices = ref({})
         const storedDevices = ref([])
         const currentSimulatingDevice = ref('')
@@ -37,9 +36,7 @@ const app = createApp({
             { title: '操作', key: 'action', sortable: false }
         ]
 
-        const scannedDevices = computed(() => {
-            return Object.values(devices.value)
-        })
+        const scannedDevices = computed(() => Object.values(devices.value))
 
         const colorType = computed(() => {
             switch (status.value) {
@@ -124,12 +121,7 @@ const app = createApp({
         }
 
         function startScan() {
-            ws.value.send(`scan ${scanTime.value}\r\n`)
-            if (scanTime.value > 0) {
-                setTimeout(() => {
-                    status.value = 'idle'
-                }, scanTime.value * 1000)
-            }
+            ws.value.send(`scan 0\r\n`)
         }
 
         function stopOperation() {
@@ -221,7 +213,7 @@ const app = createApp({
             theme.global.name.value = localStorage.getItem('theme') || 'light'
         })
 
-        function toggleTheme () {
+        function toggleTheme() {
             theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
             localStorage.setItem('theme', theme.global.name.value)
         }
@@ -231,7 +223,6 @@ const app = createApp({
             isConnected,
             serverAddress,
             status,
-            scanTime,
             devices,
             storedDevices,
             currentSimulatingDevice,
