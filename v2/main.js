@@ -1,11 +1,12 @@
 const { createApp, ref, computed, onBeforeUnmount, onMounted } = Vue;
-const { createVuetify, useDisplay } = Vuetify;
+const { createVuetify, useDisplay, useTheme } = Vuetify;
 
 const vuetify = createVuetify();
 
 const app = createApp({
     setup() {
         const { smAndDown } = useDisplay()
+        const theme = useTheme()
 
         const isConnected = ref(false)
         const serverAddress = ref(localStorage.getItem('serverAddress') || '')
@@ -216,7 +217,14 @@ const app = createApp({
             onBeforeUnmount(() => {
                 window.removeEventListener('beforeunload', beforeUnloadHandler)
             })
+
+            theme.global.name.value = localStorage.getItem('theme') || 'light'
         })
+
+        function toggleTheme () {
+            theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
+            localStorage.setItem('theme', theme.global.name.value)
+        }
 
         return {
             smAndDown,
@@ -242,7 +250,8 @@ const app = createApp({
             deleteDevice,
             clearDevices,
             sortBy,
-            getManufacturer
+            getManufacturer,
+            toggleTheme
         }
     }
 });

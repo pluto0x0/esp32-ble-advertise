@@ -36,95 +36,122 @@
 
                     <!-- 主页面 -->
                     <template v-else>
-                        <!-- 状态显示 -->
-                        <v-alert :color="colorType" class="mb-4" elevation="2" :icon="statusIconType" variant="tonal">
-                            当前状态: {{ status }}
-                            <span v-if="status === 'advertising' && currentSimulatingDevice">
-                                ({{ currentSimulatingDevice }})
-                            </span>
-                            <v-btn v-if="status !== 'idle'" color="warning" class="ml-2" @click="stopOperation">
-                                停止
-                            </v-btn>
-                        </v-alert>
-
-                        <!-- 扫描控制 -->
-                        <v-card class="mb-4">
-                            <v-card-title>扫描控制</v-card-title>
-                            <v-card-text>
-                                <v-row>
-                                    <v-col cols="12" sm="6">
-                                        <v-text-field v-model="scanTime" type="number" label="扫描时间(秒), 0=持续扫描"
-                                            :disabled="status !== 'idle'"></v-text-field>
-                                    </v-col>
-                                    <v-col cols="12" sm="6">
-                                        <v-btn color="primary" @click="startScan" :disabled="status !== 'idle'">
-                                            开始扫描
+                        <v-container class="main-container" fluid>
+                            <v-row justify="center">
+                                <v-col cols="12" md="10" xl="8">
+                                    <!-- 状态显示 -->
+                                    <v-alert :color="colorType" class="mb-4" elevation="2" :icon="statusIconType"
+                                        variant="tonal">
+                                        当前状态: {{ status }}
+                                        <span v-if="status === 'advertising' && currentSimulatingDevice">
+                                            ({{ currentSimulatingDevice }})
+                                        </span>
+                                        <v-btn v-if="status !== 'idle'" color="warning" class="ml-2"
+                                            @click="stopOperation">
+                                            停止
                                         </v-btn>
-                                        &nbsp;
-                                        <v-btn color="warning" @click="clearDevices">
-                                            清空结果
-                                        </v-btn>
-                                    </v-col>
-                                </v-row>
-                            </v-card-text>
-                        </v-card>
+                                    </v-alert>
 
-                        <!-- 扫描到的设备表格 -->
-                        <v-card class="mb-4">
-                            <v-card-title class="d-flex">
-                                扫描到的设备
-                                <v-spacer></v-spacer>
-                                <v-text-field v-model="searchQuery" label="Search" prepend-inner-icon="mdi-magnify"
-                                    variant="outlined" hide-details single-line density="compact"
-                                    variant="solo-filled"></v-text-field>
-                            </v-card-title>
-                            <v-data-table :headers="scannedDevicesHeaders" :items="scannedDevices" :search="searchQuery"
-                                :items-per-page="5" class="elevation-1" :loading="status === 'scanning'"
-                                loading-text="扫描中..." :mobile="smAndDown" :sort-by="sortBy">
-                                <template v-slot:item.action="{ item }">
-                                    <v-btn size="small" color="success" @click="storeDevice(item)"
-                                        icon="mdi-content-save" variant="tonal"></v-btn>
-                                </template>
-                            </v-data-table>
-                        </v-card>
+                                    <!-- 扫描控制 -->
+                                    <v-card class="mb-4">
+                                        <v-card-title>扫描控制</v-card-title>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" sm="6">
+                                                    <v-text-field v-model="scanTime" type="number"
+                                                        label="扫描时间(秒), 0=持续扫描"
+                                                        :disabled="status !== 'idle'"></v-text-field>
+                                                </v-col>
+                                                <v-col cols="12" sm="6">
+                                                    <v-btn color="primary" @click="startScan"
+                                                        :disabled="status !== 'idle'">
+                                                        开始扫描
+                                                    </v-btn>
+                                                    &nbsp;
+                                                    <v-btn color="warning" @click="clearDevices">
+                                                        清空结果
+                                                    </v-btn>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                    </v-card>
 
-                        <!-- 储存的设备表格 -->
-                        <v-card class="mb-4">
-                            <v-card-title>储存的设备</v-card-title>
-                            <v-data-table :headers="storedDevicesHeaders" :items="storedDevices" :items-per-page="5"
-                                class="elevation-1" :mobile="smAndDown" :sort-by="sortBy">
-                                <template v-slot:item.action="{ item, index }">
-                                    <v-btn size="small" color="primary" @click="simulateDevice(item)"
-                                        :disabled="status !== 'idle'" icon="mdi-broadcast" variant="tonal">
-                                    </v-btn>
-                                    <v-btn size="small" color="warning" @click="editAlias(index)" icon="mdi-rename"
-                                        variant="tonal"></v-btn>
-                                    <v-btn size="small" color="error" @click="deleteDevice(index)" icon="mdi-delete"
-                                        variant="tonal"></v-btn>
-                                </template>
-                                <template v-slot:item.manufacturer="{ item }">
-                                    {{ getManufacturer(item.data) }}
-                                </template>
-                            </v-data-table>
-                        </v-card>
+                                    <!-- 扫描到的设备表格 -->
+                                    <v-card class="mb-4">
+                                        <v-card-title class="d-flex">
+                                            扫描到的设备
+                                            <v-spacer></v-spacer>
+                                            <v-text-field v-model="searchQuery" label="Search"
+                                                prepend-inner-icon="mdi-magnify" variant="outlined" hide-details
+                                                single-line density="compact" variant="solo-filled"></v-text-field>
+                                        </v-card-title>
+                                        <v-data-table :headers="scannedDevicesHeaders" :items="scannedDevices"
+                                            :search="searchQuery" :items-per-page="5" class="elevation-1"
+                                            :loading="status === 'scanning'" loading-text="扫描中..." :mobile="smAndDown"
+                                            :sort-by="sortBy">
+                                            <template v-slot:item.action="{ item }">
+                                                <v-btn size="small" color="success" @click="storeDevice(item)"
+                                                    icon="mdi-content-save" variant="tonal"></v-btn>
+                                            </template>
+                                            <template v-slot:item.manufacturer="{ item }">
+                                                {{ getManufacturer(item.data) }}
+                                            </template>
+                                        </v-data-table>
+                                    </v-card>
 
-                        <!-- 服务器设置 -->
-                        <v-card class="mb-4">
-                            <v-card-title>服务器设置</v-card-title>
-                            <v-card-text>
-                                <v-text-field v-model="serverAddress" label="服务器地址" append-inner-icon="mdi-reload"
-                                    @click:append-inner="connectServer"></v-text-field>
-                            </v-card-text>
-                        </v-card>
+                                    <!-- 储存的设备表格 -->
+                                    <v-card class="mb-4">
+                                        <v-card-title>储存的设备</v-card-title>
+                                        <v-data-table :headers="storedDevicesHeaders" :items="storedDevices"
+                                            :items-per-page="5" class="elevation-1" :mobile="smAndDown"
+                                            :sort-by="sortBy">
+                                            <template v-slot:item.action="{ item, index }">
+                                                <v-btn size="small" color="primary" @click="simulateDevice(item)"
+                                                    :disabled="status !== 'idle'" icon="mdi-broadcast"
+                                                    variant="tonal"></v-btn>
+                                                <v-btn size="small" color="warning" @click="editAlias(index)"
+                                                    icon="mdi-rename" variant="tonal"></v-btn>
+                                                <v-btn size="small" color="error" @click="deleteDevice(index)"
+                                                    icon="mdi-delete" variant="tonal"></v-btn>
+                                            </template>
+                                            <template v-slot:item.manufacturer="{ item }">
+                                                {{ getManufacturer(item.data) }}
+                                            </template>
+                                        </v-data-table>
+                                    </v-card>
+
+                                    <!-- 服务器设置 -->
+                                    <v-card class="mb-4">
+                                        <v-card-title>服务器设置</v-card-title>
+                                        <v-card-text>
+                                            <v-text-field v-model="serverAddress" label="服务器地址"
+                                                append-inner-icon="mdi-reload"
+                                                @click:append-inner="connectServer"></v-text-field>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-container>
                     </template>
 
+                    <style>
+                        .main-container {
+                            max-width: 1200px;
+                            margin: 0 auto;
+                        }
+                    </style>
+
                     <!-- GitHub Repository Link -->
-                    <v-card-actions class="justify-center">
+                    <div class="d-flex justify-center ">
                         <v-btn variant="text" color="primary" href="https://github.com/pluto0x0/esp32-ble-advertise"
                             target="_blank" prepend-icon="mdi-github">
                             查看 GitHub 仓库
                         </v-btn>
-                    </v-card-actions>
+                    </div>
+
+                    <v-btn color="primary" @click="toggleTheme" icon="mdi-theme-light-dark" class="position-fixed"
+                        style="right: 10%; bottom: 8%" variant="tonal">
+                    </v-btn>
                 </v-container>
             </v-main>
         </v-app>
