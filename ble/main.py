@@ -36,11 +36,14 @@ class BLEControl:
     def set_handler(self, handler):
         self.handler = handler
 
-    def scan(self, duration=10000):
+    def scan(self, duration=10000, frac=0.1):
         self.status = 'scanning'
         self.ble.active(True)
         self.ble.irq(self.irq)
-        self.ble.gap_scan(duration)
+        interval = 128000
+        window = int(interval * frac)
+        print(frac)
+        self.ble.gap_scan(duration, interval, window)
 
     def stop(self):
         self.ble.gap_advertise(None, None)
@@ -119,8 +122,9 @@ class WSClient(WebSocketClient):
             self.todo_dev.clear()
             self.connection.close()
 
-    def cmd_scan(self, duration=10):
+    def cmd_scan(self, duration=10, frac=0.1):
         duration = int(duration)
+        frac = float(frac)
 
         def handler(addr_type, addr, connectable, rssi, adv_data):
             adv_data = adv_data.hex()
@@ -128,7 +132,7 @@ class WSClient(WebSocketClient):
             print('new device!')
 
         self.ble.set_handler(handler)
-        self.ble.scan(duration * 1000)
+        self.ble.scan(duration * 1000, frac)
         return self.cmd_status()
  
     def cmd_simulate(self, data):
